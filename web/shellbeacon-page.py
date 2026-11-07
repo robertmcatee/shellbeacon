@@ -36,8 +36,10 @@
 # or <https://www.gnu.org/licenses/>.
 
 import json
+import math
 import os
 import re
+import shutil
 import subprocess
 import sys
 from datetime import datetime, timedelta
@@ -57,7 +59,8 @@ DEFAULTS = {
     "wxfile": os.path.expanduser("~/wx/latest.json"),
     "beacon_dir": "/var/aprs-beacon",
     "beacon_unit": "aprs-beacon",
-    "map_features": "",                   # optional JSON: towns/highways/rivers
+    "map_features": "",             # optional JSON: towns/highways/rivers
+    "map_base": "",                 # optional real basemap JPEG (make-basemap.py)
     "rf_freq": "144.390",
     "voice_freq": "146.430",
     "beacon_interval_min": "20",
@@ -228,11 +231,26 @@ def locator_svg():
     def Y(lat):
         return gy + gh * (1 - (lat - south))
 
+    def merc(lat):
+        phi = math.radians(lat)
+        return math.log(math.tan(phi) + 1 / math.cos(phi))
+
+    base_img = CONF.get("map_base") or ""
+    have_base = bool(base_img) and os.path.exists(base_img)
+
+    def Ym(lat):
+        """Mercator Y - matches the basemap's projection."""
+        top, bot = merc(south + 1), merc(south)
+        return gy + gh * (top - merc(lat)) / (top - bot)
+
     def pts(coords):
         return " ".join("%.1f,%.1f" % (X(lon), Y(lat)) for lat, lon in coords)
 
     geo = []
-    feats = load_features()
+    feats = {} if have_base else load_features()
+    if have_base:
+        geo.append('<image href="map-base.jpg" x="%d" y="%d" width="%d" '
+                   'height="%d" preserveAspectRatio="none"/>' % (gx, gy, gw, gh))
     for river in feats.get("rivers", []):
         geo.append('<polyline points="%s" class="river"/>' % pts(river["points"]))
         if river.get("label") and river.get("label_at"):
@@ -263,20 +281,29 @@ def locator_svg():
     for i in range(25):                        # subsquare hairlines
         x = gx + gw * i / 24
         lines.append('<line x1="%.1f" y1="%d" x2="%.1f" y2="%d" class="sub"/>' % (x, gy, x, gy + gh))
-        y = gy + gh * i / 24
+        y = Ym(south + i / 24.0) if have_base else gy + gh * i / 24
         lines.append('<line x1="%d" y1="%.1f" x2="%d" y2="%.1f" class="sub"/>' % (gx, y, gx + gw, y))
     for i in range(11):                        # square lines (10 x 10)
         x = gx + gw * i / 10
         lines.append('<line x1="%.1f" y1="%d" x2="%.1f" y2="%d" class="sqr"/>' % (x, gy, x, gy + gh))
-        y = gy + gh * i / 10
+        y = Ym(south + i / 10.0) if have_base else gy + gh * i / 10
         lines.append('<line x1="%d" y1="%.1f" x2="%d" y2="%.1f" class="sqr"/>' % (gx, y, gx + gw, y))
 
     fx = (LON - west) / 2.0                    # pin fractions in the square
     fy = LAT - south
-    px, py = gx + gw * fx, gy + gh * (1 - fy)
     sub_x, sub_y = int(fx * 24), int(fy * 24)  # the station's subsquare cell
-    cx, cy = gx + gw * sub_x / 24, gy + gh * (1 - (sub_y + 1) / 24)
-    cw, ch = gw / 24, gh / 24
+    cw = gw / 24
+    if have_base:
+        px, py = gx + gw * fx, Ym(LAT)
+        cx = gx + gw * sub_x / 24
+        cy = Ym(south + (sub_y + 1) / 24.0)
+        ch = Ym(south + sub_y / 24.0) - cy
+    else:
+        px, py = gx + gw * fx, gy + gh * (1 - fy)
+        cx, cy = gx + gw * sub_x / 24, gy + gh * (1 - (sub_y + 1) / 24)
+        ch = gh / 24
+    attr = ('<text x="%d" y="%d" class="lab attr">© OpenStreetMap contributors</text>'
+            % (gx + 6, gy + gh - 8)) if have_base else ""
     return """<svg class="map" viewBox="0 0 {W} {H}" role="img" aria-label="Map of Maidenhead square {grid4}, station in subsquare {sub}">
 <rect x="{gx}" y="{gy}" width="{gw}" height="{gh}" class="frame"/>
 {geo}
@@ -290,12 +317,13 @@ def locator_svg():
 <text x="{gx}" y="{bot}" class="lab">{slat}&deg;N</text>
 <text x="{gx}" y="{bot2}" class="lab">{wlon}&deg;W</text>
 <text x="{rx}" y="{bot2}" class="lab end">{elon}&deg;W</text>
+{attr}
 </svg>""".format(W=W, H=H, gx=gx, gy=gy, gw=gw, gh=gh, geo="\n".join(geo),
                  lines="\n".join(lines),
                  cx=cx, cy=cy, cw=cw, ch=ch, px=px, py=py,
                  gx2=gx + 10, gy2=gy + 24, tx=cx + cw + 6, ty=cy + ch - 3,
                  top=gy - 10, bot=gy + gh + 20, bot2=gy + gh + 38, rx=gx + gw,
-                 grid4=GRID[:4], sub=GRID[4:],
+                 grid4=GRID[:4], sub=GRID[4:], attr=attr,
                  nlat=int(south + 1), slat=int(south),
                  wlon=int(-west), elon=int(-(west + 2)))
 
@@ -366,6 +394,7 @@ svg.map .town {{ fill:var(--head); }}
 svg.map .townlab {{ font-size:11.5px; }}
 svg.map .townlab.big2 {{ font-size:13px; fill:var(--head); letter-spacing:.14em; }}
 svg.map .townlab.small {{ font-size:10px; opacity:.72; }}
+svg.map .attr {{ font-size:8.5px; opacity:.6; }}
 svg.map .hwylab {{ fill:var(--accent); font-size:11px; }}
 svg.map .riverlab {{ fill:var(--accent2); font-size:11px; font-style:italic; }}
 svg.spark {{ width:100%; height:auto; display:block; }}
@@ -576,6 +605,8 @@ def main():
     if wx_raw:
         with open(os.path.join(WEBROOT, "latest.json"), "wb") as fh:
             fh.write(wx_raw)
+    if CONF["map_base"] and os.path.exists(CONF["map_base"]):
+        shutil.copyfile(CONF["map_base"], os.path.join(WEBROOT, "map-base.jpg"))
     print("%s page generated: %s" % (CALL, status))
 
 
