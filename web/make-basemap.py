@@ -1,20 +1,21 @@
 #!/usr/bin/env python3
 # make-basemap.py - build a real map base for a ShellBeacon status page.
 #
-# Fetches OpenStreetMap tiles ONCE for the station's Maidenhead square,
-# stitches and crops them to the square's exact bounds, and re-renders
-# the result as a muted Solarized-dark duotone JPEG, so the status page
-# can serve a real map (real freeways, real towns, real geography) as a
-# single local file - no tile calls, no trackers at page-view time.
-# The page generator draws the Maidenhead grid, the subsquare highlight
-# and the station pin over it.
+# Fetches OpenStreetMap tiles ONCE for the station's Maidenhead
+# SUBSQUARE (the 6-character cell, 5' x 2.5'), stitches and crops them
+# to the cell's exact bounds, and re-renders the result as a muted
+# Solarized-dark duotone JPEG, so the status page can serve a real
+# street-level map as a single local file - no tile calls, no
+# trackers at page-view time. The page generator superimposes the
+# next Maidenhead level's grid, the extended-square highlight and
+# the station pin over it.
 #
 # Usage:  make-basemap.py LAT LON OUT.jpg
 # Example: make-basemap.py 29.6585 -98.4710 /usr/local/etc/map-base.jpg
 #
 # Map data (c) OpenStreetMap contributors - keep the attribution the
-# page prints under the chart. Tiles are fetched at zoom 9 (a whole
-# square is eight tiles); be polite and run it once per station.
+# page prints in the chart's corner. Tiles are fetched at zoom 14 (a
+# subsquare is about thirty tiles); be polite, run it once per station.
 
 import math
 import sys
@@ -23,7 +24,7 @@ from io import BytesIO
 
 from PIL import Image
 
-ZOOM = 9
+ZOOM = 14
 UA = {"User-Agent": "shellbeacon-page make-basemap (station status page; "
                     "https://github.com/robertmcatee/shellbeacon-telemetry)"}
 
@@ -41,9 +42,13 @@ def main():
         print(__doc__)
         return 2
     lat, lon, out = float(sys.argv[1]), float(sys.argv[2]), sys.argv[3]
-    west = math.floor(lon / 2.0) * 2.0
-    south = math.floor(lat)
-    east, north = west + 2.0, south + 1.0
+    sq_west = math.floor(lon / 2.0) * 2.0       # the 4-char square first
+    sq_south = math.floor(lat)
+    sub_x = int((lon - sq_west) / 2.0 * 24)     # then the 6-char subsquare
+    sub_y = int((lat - sq_south) * 24)
+    west = sq_west + sub_x * (2.0 / 24)
+    south = sq_south + sub_y * (1.0 / 24)
+    east, north = west + 2.0 / 24, south + 1.0 / 24
 
     fx0, fy0 = tile_frac(north, west, ZOOM)   # top-left, fractional tiles
     fx1, fy1 = tile_frac(south, east, ZOOM)   # bottom-right
@@ -62,7 +67,7 @@ def main():
     right = int((fx1 - tx0) * 256)
     bottom = int((fy1 - ty0) * 256)
     base = sheet.crop((left, top, right, bottom))
-    print("cropped square: %dx%d px" % base.size)
+    print("cropped subsquare: %dx%d px" % base.size)
 
     # Solarized-dark duotone: stretch the luminance band OSM actually
     # uses (labels sit ~90-120, land ~242) across the full range first,
