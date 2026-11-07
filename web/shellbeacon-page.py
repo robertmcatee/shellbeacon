@@ -240,7 +240,8 @@ def locator_svg():
                        % (X(river["label_at"][1]), Y(river["label_at"][0]),
                           river["label"]))
     for hwy in feats.get("highways", []):
-        geo.append('<polyline points="%s" class="hwy"/>' % pts(hwy["points"]))
+        cls = "hwy loop" if hwy.get("style") == "loop" else "hwy"
+        geo.append('<polyline points="%s" class="%s"/>' % (pts(hwy["points"]), cls))
         if hwy.get("label") and hwy.get("label_at"):
             anchor = ' text-anchor="end"' if hwy.get("label_anchor") == "end" else ""
             geo.append('<text x="%.1f" y="%.1f" class="lab hwylab"%s>%s</text>'
@@ -248,13 +249,15 @@ def locator_svg():
                           anchor, hwy["label"]))
     for town in feats.get("towns", []):
         big = town.get("big")
+        small = town.get("small")
         geo.append('<circle cx="%.1f" cy="%.1f" r="%s" class="town"/>'
-                   % (X(town["lon"]), Y(town["lat"]), "4" if big else "2.6"))
+                   % (X(town["lon"]), Y(town["lat"]),
+                      "4" if big else "2" if small else "2.6"))
         geo.append('<text x="%.1f" y="%.1f" class="lab townlab%s" text-anchor="%s">%s</text>'
                    % (X(town["lon"]) + town.get("dx", 9),
                       Y(town["lat"]) + town.get("dy", 4),
-                      " big2" if big else "", town.get("anchor", "start"),
-                      town["name"]))
+                      " big2" if big else " small" if small else "",
+                      town.get("anchor", "start"), town["name"]))
 
     lines = []
     for i in range(25):                        # subsquare hairlines
@@ -357,10 +360,12 @@ svg.map .lab.big {{ font-size:17px; fill:var(--head); }}
 svg.map .lab.end {{ text-anchor:end; }}
 svg.map .celllab {{ fill:var(--accent); }}
 svg.map .hwy {{ fill:none; stroke:var(--ink); stroke-width:1.6; opacity:.55; }}
+svg.map .hwy.loop {{ stroke-dasharray:5 4; stroke-width:1.3; opacity:.5; }}
 svg.map .river {{ fill:none; stroke:var(--accent2); stroke-width:1.2; opacity:.8; }}
 svg.map .town {{ fill:var(--head); }}
 svg.map .townlab {{ font-size:11.5px; }}
 svg.map .townlab.big2 {{ font-size:13px; fill:var(--head); letter-spacing:.14em; }}
+svg.map .townlab.small {{ font-size:10px; opacity:.72; }}
 svg.map .hwylab {{ fill:var(--accent); font-size:11px; }}
 svg.map .riverlab {{ fill:var(--accent2); font-size:11px; font-style:italic; }}
 svg.spark {{ width:100%; height:auto; display:block; }}
