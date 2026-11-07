@@ -1,0 +1,7 @@
+[Unit]
+Description=Generate the ShellBeacon station status page
+After=network.target aprs-beacon.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /usr/local/sbin/shellbeacon-page.py
