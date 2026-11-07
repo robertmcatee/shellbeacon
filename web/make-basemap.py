@@ -14,6 +14,8 @@
 #   square     the station's 4-char square (2 x 1 deg), zoom 9
 #   range      station-centred, 0.64 deg of latitude, zoom 10 -
 #              sized so 5/10/20-mile range rings fit the frame
+#   hamlet     the station's home ground, a fixed box on the roads
+#              that bound daily life, zoom 14
 #
 # Usage:  make-basemap.py VIEW LAT LON OUTBASE
 #   writes OUTBASE.jpg (dark) and OUTBASE-light.jpg (light)
@@ -33,6 +35,12 @@ from PIL import Image
 UA = {"User-Agent": "shellbeacon-page make-basemap (station status page; "
                     "https://github.com/robertmcatee/shellbeacon-telemetry)"}
 RANGE_LAT_SPAN = 0.64          # keep in step with shellbeacon-page.py
+# The hamlet box: fixed bounds on the station's home ground (the
+# roads that bound it), NOT derived from the station position.
+# Keep in step with shellbeacon-page.py.
+HAMLET_SOUTH, HAMLET_NORTH = 29.596, 29.718
+HAMLET_CENTRE_LON = -98.4848
+HAMLET_ASPECT = 600.0 / 460.0  # the generator's hamlet frame
 
 
 def tile_frac(lat, lon, z):
@@ -66,7 +74,12 @@ def bounds(view, lat, lon):
         # longitude span from the Mercator aspect of the 600x340 frame
         dlon = (merc(north) - merc(south)) * (600.0 / 340.0) / (2 * math.pi) * 360.0
         return lon - dlon / 2.0, south, lon + dlon / 2.0, north, 10
-    raise SystemExit("view must be subsquare, square or range")
+    if view == "hamlet":
+        dlon = (merc(HAMLET_NORTH) - merc(HAMLET_SOUTH)) * HAMLET_ASPECT \
+            / (2 * math.pi) * 360.0
+        return (HAMLET_CENTRE_LON - dlon / 2.0, HAMLET_SOUTH,
+                HAMLET_CENTRE_LON + dlon / 2.0, HAMLET_NORTH, 14)
+    raise SystemExit("view must be subsquare, square, range or hamlet")
 
 
 def fetch_crop(west, south, east, north, zoom):

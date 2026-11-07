@@ -28,10 +28,20 @@ beacon_unit="aprs-beacon"           # the beacon's systemd unit (journal)
 # map_base=""                 # optional real basemap JPEGs for the
                               # charts, built once by make-basemap.py:
                               # map_base = subsquare view, map_square =
-                              # square view, map_range = range view.
-                              # Each names the DARK file; its "-light"
-                              # twin must sit beside it. With a basemap
-                              # the drawn geography is replaced.
+                              # square view, map_range = range view,
+                              # map_hamlet = hamlet view. Each names
+                              # the DARK file; its "-light" twin must
+                              # sit beside it. With a basemap the drawn
+                              # geography is replaced.
+# map_hamlet=""               # the hamlet view's basemap (above)
+# hamlet_file=""              # optional JSON: the hamlet boundary
+                              # polygon (drawn dashed, following the
+                              # roads that bound the station's home
+                              # ground) and its practical places -
+                              # see hamlet.example.json. The hamlet
+                              # bounds are the HAMLET_* constants in
+                              # shellbeacon-page.py / make-basemap.py;
+                              # set them to your own ground.
 
 # --- station facts shown on the page ---
 rf_freq="144.390"

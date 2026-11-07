@@ -63,6 +63,8 @@ DEFAULTS = {
     "map_base": "",                 # optional real basemap JPEG (make-basemap.py)
     "map_square": "",               # optional square-view basemap JPEG
     "map_range": "",                # optional range-view basemap JPEG
+    "map_hamlet": "",               # optional hamlet-view basemap JPEG
+    "hamlet_file": "",              # optional JSON: hamlet boundary + POIs
     "rf_freq": "144.390",
     "voice_freq": "146.430",
     "beacon_interval_min": "20",
@@ -207,6 +209,17 @@ def sparkline(rows):
 
 def load_features():
     path = CONF["map_features"]
+    if not path:
+        return {}
+    try:
+        with open(path) as fh:
+            return json.load(fh)
+    except Exception:
+        return {}
+
+
+def load_hamlet():
+    path = CONF["hamlet_file"]
     if not path:
         return {}
     try:
@@ -445,6 +458,89 @@ def range_svg():
                  wlon=_dm(west, "E", "W"), elon=_dm(east, "E", "W"))
 
 
+# The hamlet box: fixed bounds on the station's home ground (the
+# roads that bound it), NOT derived from the station position.
+# Keep in step with make-basemap.py.
+HAMLET_SOUTH, HAMLET_NORTH = 29.596, 29.718
+HAMLET_CENTRE_LON = -98.4848
+HAMLET_ASPECT = 600.0 / 460.0  # this view's frame, below
+
+
+def hamlet_svg():
+    """Basemap mode, hamlet view: the station's home ground - the
+    ground inside the roads that bound daily life - as a real map,
+    the boundary drawn as a dashed line over the streets it follows,
+    and the practical places marked: school, library, shops, park,
+    the services a household actually walks or drives to. Bounds
+    match make-basemap.py's hamlet view."""
+    def merc(lat):
+        phi = math.radians(lat)
+        return math.log(math.tan(phi) + 1 / math.cos(phi))
+
+    dlon = (merc(HAMLET_NORTH) - merc(HAMLET_SOUTH)) * HAMLET_ASPECT \
+        / (2 * math.pi) * 360.0
+    west, east = HAMLET_CENTRE_LON - dlon / 2.0, HAMLET_CENTRE_LON + dlon / 2.0
+    W, H = 696, 556
+    gx, gy, gw, gh = 48, 36, 600, 460
+
+    def X(lon):
+        return gx + gw * (lon - west) / (east - west)
+
+    def Y(lat):
+        top, bot = merc(HAMLET_NORTH), merc(HAMLET_SOUTH)
+        return gy + gh * (top - merc(lat)) / (top - bot)
+
+    data = load_hamlet()
+    poly = ""
+    boundary = data.get("boundary") or []
+    if len(boundary) > 2:
+        pts = " ".join("%.1f,%.1f" % (X(lon), Y(lat)) for lat, lon in boundary)
+        poly = '<polygon points="%s" class="hamlet"/>' % pts
+    marks = []
+    for poi in data.get("pois") or []:
+        try:
+            px2, py2 = X(float(poi["lon"])), Y(float(poi["lat"]))
+            name = str(poi["name"])
+        except Exception:
+            continue
+        if not (gx <= px2 <= gx + gw and gy <= py2 <= gy + gh):
+            continue
+        if poi.get("side") == "below":
+            marks.append('<circle cx="%.1f" cy="%.1f" r="3.2" class="poi"/>'
+                         '<text x="%.1f" y="%.1f" class="lab poilab mid">%s</text>'
+                         % (px2, py2, px2, py2 + 15, name))
+        elif px2 > gx + gw - 170 or poi.get("side") == "left":
+            marks.append('<text x="%.1f" y="%.1f" class="lab poilab end">%s</text>'
+                         '<circle cx="%.1f" cy="%.1f" r="3.2" class="poi"/>'
+                         % (px2 - 8, py2 + 3.5, name, px2, py2))
+        else:
+            marks.append('<circle cx="%.1f" cy="%.1f" r="3.2" class="poi"/>'
+                         '<text x="%.1f" y="%.1f" class="lab poilab">%s</text>'
+                         % (px2, py2, px2 + 8, py2 + 3.5, name))
+    px, py = X(LON), Y(LAT)
+    return """<svg class="map hasbase" viewBox="0 0 {W} {H}" role="img" aria-label="Map of the station's home ground inside its bounding roads, with practical places marked">
+<rect x="{gx}" y="{gy}" width="{gw}" height="{gh}" class="frame"/>
+{images}
+{poly}
+{marks}
+<text x="{gx2}" y="{gy2}" class="lab big">HAMLET</text>
+<circle cx="{px:.1f}" cy="{py:.1f}" r="10" class="pinring"/>
+<circle cx="{px:.1f}" cy="{py:.1f}" r="4" class="pin"/>
+<text x="{gx}" y="{top}" class="lab">{nlat}</text>
+<text x="{gx}" y="{bot}" class="lab">{slat}</text>
+<text x="{gx}" y="{bot2}" class="lab">{wlon}</text>
+<text x="{rx}" y="{bot2}" class="lab end">{elon}</text>
+<text x="{ax}" y="{ay}" class="lab attr">© OpenStreetMap contributors</text>
+</svg>""".format(W=W, H=H, gx=gx, gy=gy, gw=gw, gh=gh,
+                 images=chart_images("map-hamlet", gx, gy, gw, gh),
+                 poly=poly, marks="\n".join(marks),
+                 px=px, py=py, gx2=gx + 10, gy2=gy + 24,
+                 top=gy - 10, bot=gy + gh + 20, bot2=gy + gh + 38, rx=gx + gw,
+                 ax=gx + 6, ay=gy + gh - 8,
+                 nlat=_dm(HAMLET_NORTH, "N", "S"), slat=_dm(HAMLET_SOUTH, "N", "S"),
+                 wlon=_dm(west, "E", "W"), elon=_dm(east, "E", "W"))
+
+
 def locator_svg():
     """The station's Maidenhead square as a chart: optional geography
     (towns, highways, rivers from the map-features file) under the
@@ -614,6 +710,12 @@ html[data-theme="light"] svg.map.hasbase .lab.big {{ fill:#073642; }}
 html[data-theme="light"] svg.map.hasbase .attr {{ fill:#073642; }}
 html[data-theme="dark"] svg.map .imglight {{ display:none; }}
 html[data-theme="light"] svg.map .imgdark {{ display:none; }}
+svg.map .hamlet {{ fill:var(--accent2); fill-opacity:.07; stroke:var(--accent2); stroke-width:1.6; stroke-dasharray:7 4; opacity:.9; }}
+svg.map .poi {{ fill:var(--head); stroke:var(--bg); stroke-width:1.2; }}
+svg.map .poilab {{ font-size:10.5px; letter-spacing:.05em; fill:var(--ink); paint-order:stroke; stroke-width:3px; }}
+svg.map .poilab.mid {{ text-anchor:middle; }}
+html[data-theme="dark"] svg.map .poilab {{ stroke:#0a303c; }}
+html[data-theme="light"] svg.map .poilab {{ stroke:#e9ecdb; }}
 svg.map .ring {{ fill:none; stroke:var(--accent); stroke-width:1.2; stroke-dasharray:6 4; opacity:.85; }}
 svg.map .ringlab {{ fill:var(--accent); font-size:11px; }}
 .chartbtns {{ display:none; gap:6px; margin:0 0 8px; }}
@@ -799,6 +901,8 @@ def main():
     views = []
     if basemap_pair("map_base"):
         views.append(("subsquare", "SUBSQUARE", subsquare_svg()))
+    if basemap_pair("map_hamlet"):
+        views.append(("hamlet", "HAMLET", hamlet_svg()))
     if basemap_pair("map_square"):
         views.append(("square", "SQUARE", square_svg()))
     if basemap_pair("map_range"):
@@ -871,7 +975,8 @@ def main():
     if wx_raw:
         with open(os.path.join(WEBROOT, "latest.json"), "wb") as fh:
             fh.write(wx_raw)
-    for conf_key, name in (("map_base", "map-base"), ("map_square", "map-square"),
+    for conf_key, name in (("map_base", "map-base"), ("map_hamlet", "map-hamlet"),
+                           ("map_square", "map-square"),
                            ("map_range", "map-range")):
         pair = basemap_pair(conf_key)
         if pair:
