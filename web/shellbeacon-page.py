@@ -214,11 +214,89 @@ def load_features():
         return {}
 
 
+def subsquare_svg():
+    """Basemap mode: the chart zooms to the station's own subsquare -
+    the real map (map-base.jpg, built by make-basemap.py for exactly
+    this cell) with the next Maidenhead level's 10 x 10 grid over it,
+    the station's extended-square cell highlighted, and the pin at the
+    exact transmitted position. Grid Y uses Mercator, like the map."""
+    west = math.floor(LON / 2.0) * 2.0
+    south = math.floor(LAT)
+    sub_x = int((LON - west) / 2.0 * 24)
+    sub_y = int((LAT - south) * 24)
+    cw_deg, ch_deg = 2.0 / 24, 1.0 / 24        # subsquare: 5' x 2.5'
+    cell_w = west + sub_x * cw_deg
+    cell_s = south + sub_y * ch_deg
+    cell_e, cell_n = cell_w + cw_deg, cell_s + ch_deg
+    W, H = 696, 424
+    gx, gy, gw, gh = 48, 36, 600, 340
+
+    def X(lon):
+        return gx + gw * (lon - cell_w) / cw_deg
+
+    def merc(lat):
+        phi = math.radians(lat)
+        return math.log(math.tan(phi) + 1 / math.cos(phi))
+
+    def Y(lat):
+        top, bot = merc(cell_n), merc(cell_s)
+        return gy + gh * (top - merc(lat)) / (top - bot)
+
+    def dm(value, pos, neg):
+        d = int(abs(value))
+        m = (abs(value) - d) * 60
+        return "%d°%.1f′%s" % (d, m, pos if value >= 0 else neg)
+
+    lines = []
+    for i in range(11):                        # the 10 x 10 extended grid
+        x = X(cell_w + cw_deg * i / 10.0)
+        lines.append('<line x1="%.1f" y1="%d" x2="%.1f" y2="%d" class="sqr"/>' % (x, gy, x, gy + gh))
+        y = Y(cell_s + ch_deg * i / 10.0)
+        lines.append('<line x1="%d" y1="%.1f" x2="%d" y2="%.1f" class="sqr"/>' % (gx, y, gx + gw, y))
+
+    ex = int((LON - cell_w) / (cw_deg / 10.0))  # the station's 8-char cell
+    ey = int((LAT - cell_s) / (ch_deg / 10.0))
+    ex_w = cell_w + ex * cw_deg / 10.0
+    ey_s = cell_s + ey * ch_deg / 10.0
+    cx, cy = X(ex_w), Y(ey_s + ch_deg / 10.0)
+    cw2, ch2 = X(ex_w + cw_deg / 10.0) - cx, Y(ey_s) - cy
+    px, py = X(LON), Y(LAT)
+    ext = "%d%d" % (ex, ey)
+    return """<svg class="map hasbase" viewBox="0 0 {W} {H}" role="img" aria-label="Map of Maidenhead subsquare {grid}, station in extended square {ext}">
+<rect x="{gx}" y="{gy}" width="{gw}" height="{gh}" class="frame"/>
+<image href="map-base.jpg" x="{gx}" y="{gy}" width="{gw}" height="{gh}" preserveAspectRatio="none"/>
+{lines}
+<rect x="{cx:.1f}" y="{cy:.1f}" width="{cw2:.1f}" height="{ch2:.1f}" class="cell"/>
+<text x="{gx2}" y="{gy2}" class="lab big">{grid}</text>
+<text x="{tx:.1f}" y="{ty:.1f}" class="lab celllab">{ext}</text>
+<circle cx="{px:.1f}" cy="{py:.1f}" r="10" class="pinring"/>
+<circle cx="{px:.1f}" cy="{py:.1f}" r="4" class="pin"/>
+<text x="{gx}" y="{top}" class="lab">{nlat}</text>
+<text x="{gx}" y="{bot}" class="lab">{slat}</text>
+<text x="{gx}" y="{bot2}" class="lab">{wlon}</text>
+<text x="{rx}" y="{bot2}" class="lab end">{elon}</text>
+<text x="{ax}" y="{ay}" class="lab attr">© OpenStreetMap contributors</text>
+</svg>""".format(W=W, H=H, gx=gx, gy=gy, gw=gw, gh=gh,
+                 lines="\n".join(lines),
+                 cx=cx, cy=cy, cw2=cw2, ch2=ch2, px=px, py=py,
+                 gx2=gx + 10, gy2=gy + 24, tx=cx + cw2 + 6, ty=cy + ch2 - 3,
+                 top=gy - 10, bot=gy + gh + 20, bot2=gy + gh + 38, rx=gx + gw,
+                 ax=gx + 6, ay=gy + gh - 8,
+                 grid=GRID, ext=ext,
+                 nlat=dm(cell_n, "N", "S"), slat=dm(cell_s, "N", "S"),
+                 wlon=dm(cell_w, "E", "W"), elon=dm(cell_e, "E", "W"))
+
+
 def locator_svg():
     """The station's Maidenhead square as a chart: optional geography
     (towns, highways, rivers from the map-features file) under the
     subsquare grid, the station's own subsquare highlighted, and the
-    station pinned at its exact position."""
+    station pinned at its exact position. With a basemap configured,
+    the chart zooms to the station's subsquare instead - see
+    subsquare_svg()."""
+    base_img = CONF.get("map_base") or ""
+    if base_img and os.path.exists(base_img):
+        return subsquare_svg()
     import math
     west = math.floor(LON / 2.0) * 2.0         # square: 2 deg x 1 deg
     south = math.floor(LAT)
@@ -231,26 +309,11 @@ def locator_svg():
     def Y(lat):
         return gy + gh * (1 - (lat - south))
 
-    def merc(lat):
-        phi = math.radians(lat)
-        return math.log(math.tan(phi) + 1 / math.cos(phi))
-
-    base_img = CONF.get("map_base") or ""
-    have_base = bool(base_img) and os.path.exists(base_img)
-
-    def Ym(lat):
-        """Mercator Y - matches the basemap's projection."""
-        top, bot = merc(south + 1), merc(south)
-        return gy + gh * (top - merc(lat)) / (top - bot)
-
     def pts(coords):
         return " ".join("%.1f,%.1f" % (X(lon), Y(lat)) for lat, lon in coords)
 
     geo = []
-    feats = {} if have_base else load_features()
-    if have_base:
-        geo.append('<image href="map-base.jpg" x="%d" y="%d" width="%d" '
-                   'height="%d" preserveAspectRatio="none"/>' % (gx, gy, gw, gh))
+    feats = load_features()
     for river in feats.get("rivers", []):
         geo.append('<polyline points="%s" class="river"/>' % pts(river["points"]))
         if river.get("label") and river.get("label_at"):
@@ -281,29 +344,21 @@ def locator_svg():
     for i in range(25):                        # subsquare hairlines
         x = gx + gw * i / 24
         lines.append('<line x1="%.1f" y1="%d" x2="%.1f" y2="%d" class="sub"/>' % (x, gy, x, gy + gh))
-        y = Ym(south + i / 24.0) if have_base else gy + gh * i / 24
+        y = gy + gh * i / 24
         lines.append('<line x1="%d" y1="%.1f" x2="%d" y2="%.1f" class="sub"/>' % (gx, y, gx + gw, y))
     for i in range(11):                        # square lines (10 x 10)
         x = gx + gw * i / 10
         lines.append('<line x1="%.1f" y1="%d" x2="%.1f" y2="%d" class="sqr"/>' % (x, gy, x, gy + gh))
-        y = Ym(south + i / 10.0) if have_base else gy + gh * i / 10
+        y = gy + gh * i / 10
         lines.append('<line x1="%d" y1="%.1f" x2="%d" y2="%.1f" class="sqr"/>' % (gx, y, gx + gw, y))
 
     fx = (LON - west) / 2.0                    # pin fractions in the square
     fy = LAT - south
+    px, py = gx + gw * fx, gy + gh * (1 - fy)
     sub_x, sub_y = int(fx * 24), int(fy * 24)  # the station's subsquare cell
-    cw = gw / 24
-    if have_base:
-        px, py = gx + gw * fx, Ym(LAT)
-        cx = gx + gw * sub_x / 24
-        cy = Ym(south + (sub_y + 1) / 24.0)
-        ch = Ym(south + sub_y / 24.0) - cy
-    else:
-        px, py = gx + gw * fx, gy + gh * (1 - fy)
-        cx, cy = gx + gw * sub_x / 24, gy + gh * (1 - (sub_y + 1) / 24)
-        ch = gh / 24
-    attr = ('<text x="%d" y="%d" class="lab attr">© OpenStreetMap contributors</text>'
-            % (gx + 6, gy + gh - 8)) if have_base else ""
+    cx, cy = gx + gw * sub_x / 24, gy + gh * (1 - (sub_y + 1) / 24)
+    cw, ch = gw / 24, gh / 24
+    attr = ""
     return """<svg class="map{base_cls}" viewBox="0 0 {W} {H}" role="img" aria-label="Map of Maidenhead square {grid4}, station in subsquare {sub}">
 <rect x="{gx}" y="{gy}" width="{gw}" height="{gh}" class="frame"/>
 {geo}
@@ -323,8 +378,7 @@ def locator_svg():
                  cx=cx, cy=cy, cw=cw, ch=ch, px=px, py=py,
                  gx2=gx + 10, gy2=gy + 24, tx=cx + cw + 6, ty=cy + ch - 3,
                  top=gy - 10, bot=gy + gh + 20, bot2=gy + gh + 38, rx=gx + gw,
-                 grid4=GRID[:4], sub=GRID[4:], attr=attr,
-                 base_cls=" hasbase" if have_base else "",
+                 grid4=GRID[:4], sub=GRID[4:], attr=attr, base_cls="",
                  nlat=int(south + 1), slat=int(south),
                  wlon=int(-west), elon=int(-(west + 2)))
 
