@@ -25,6 +25,10 @@ beacon_unit="aprs-beacon"           # the beacon's systemd unit (journal)
 # map_features=""             # optional JSON: towns, highways, rivers
                               # drawn on the locator chart - see
                               # map-features.example.json
+# map_base=""                 # optional real basemap JPEG for the
+                              # chart, built once by make-basemap.py;
+                              # when set it replaces the drawn geography
+                              # (grid, subsquare and pin stay overlaid)
 
 # --- station facts shown on the page ---
 rf_freq="144.390"
