@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ShellBeacon — an APRS beacon in pure shell</title>
+<meta name="description" content="ShellBeacon: a small APRS beacon in pure shell script for a Raspberry Pi — position, telemetry, weather, RF, and voice. By KJ5GBY.">
+<style>
+  :root{
+    --base03:#002b36; --base02:#073642; --base01:#586e75; --base0:#839496;
+    --base1:#93a1a1; --blue:#268bd2; --green:#859900; --yellow:#b58900; --cyan:#2aa198;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--base03);color:var(--base0);
+       font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+       line-height:1.55;font-size:15px}
+  main{max-width:44rem;margin:0 auto;padding:2.2rem 1.1rem 3rem}
+  h1{color:var(--base1);font-size:1.7rem;margin:.2rem 0 .1rem;letter-spacing:.02em}
+  h2{color:var(--cyan);font-size:1.05rem;margin:2rem 0 .5rem;text-transform:uppercase;letter-spacing:.12em}
+  .call{color:var(--yellow);letter-spacing:.25em;font-size:.8rem;text-transform:uppercase}
+  .lede{color:var(--base1);font-size:1.02rem}
+  a{color:var(--blue)}
+  a:hover{color:var(--cyan)}
+  ul{padding-left:1.2rem}
+  li{margin:.25rem 0}
+  code{background:var(--base02);padding:.05rem .3rem;border-radius:3px;color:var(--base1)}
+  pre{background:var(--base02);border:1px solid var(--base01);border-radius:4px;
+      padding:.8rem 1rem;overflow-x:auto;color:var(--base1);font-size:.86rem}
+  .panel{border:1px solid var(--base01);border-radius:4px;padding:1rem 1.2rem;margin-top:1.2rem;background:var(--base02)}
+  .panel p{margin:.3rem 0}
+  .ok{color:var(--green)}
+  footer{margin-top:2.6rem;border-top:1px solid var(--base01);padding-top:1rem;font-size:.85rem;color:var(--base01)}
+</style>
+</head>
+<body>
+<main>
+  <div class="call">KJ5GBY · San Antonio, Texas · EL09sp</div>
+  <h1>ShellBeacon</h1>
+  <p class="lede">A small APRS beacon in pure shell script, for a Raspberry Pi or any
+  Linux box. No daemon, no database — bash, netcat, and curl, run from cron or a
+  systemd timer.</p>
+
+  <h2>What it sends</h2>
+  <p>Every twenty minutes, for your station:</p>
+  <ul>
+    <li>a <strong>position</strong> packet with your station comment,</li>
+    <li>a <strong>telemetry</strong> packet reporting the host itself — CPU temperature,
+      load, free memory, disk use, uptime, and an optional web-server health bit —
+      with the standard PARM / UNIT / EQNS / BITS definitions,</li>
+    <li>a <strong>weather</strong> field carrying live outdoor temperature, when the
+      companion collector is running, and</li>
+    <li>optionally, <strong>the same frames on RF</strong>: 144.390 MHz AX.25 AFSK,
+      generated with Dire Wolf's <code>gen_packets</code> and transmitted with
+      <strong>rpitx</strong> from a GPIO pin — no radio required,</li>
+    <li>and optionally a <strong>spoken voice announcement</strong> on a 2 m FM simplex
+      channel — ID, time, outdoor temperature, station health — through the same
+      rpitx path.</li>
+  </ul>
+
+  <h2>The reference station</h2>
+  <div class="panel">
+    <p><span class="ok">●</span> KJ5GBY runs ShellBeacon on a Raspberry Pi Zero W:
+    position and telemetry to APRS-IS, patio temperature decoded from a 433 MHz
+    sensor by an RTL-SDR receiver, RF on 144.390 at ~10 mW into a quarter-wave
+    ground-plane antenna, and a voice announcement on 146.430 MHz.</p>
+    <p>Its weather and telemetry are public:
+    <a href="https://www.cenzontle.us/kj5gby/">live station page</a> ·
+    <a href="https://aprs.fi/info/a/KJ5GBY">aprs.fi</a></p>
+  </div>
+
+  <h2>The status page</h2>
+  <p>The <code>web/</code> component generates a companion status page like the
+  reference station's: patio weather with a 24-hour sparkline, the transmitted
+  telemetry decoded into a table, and a choice of locator charts — the subsquare,
+  the whole grid square, or a range chart with true 5 / 10 / 20-mile rings — each
+  in dark and light to follow the page theme. One static page, regenerated on a
+  timer; any station can run its own from the shell-style config file.</p>
+
+  <h2>Requirements</h2>
+  <ul>
+    <li>bash, netcat (<code>nc -C</code> — OpenBSD netcat), curl, awk</li>
+    <li>for telemetry on a Pi: <code>vcgencmd</code> (Raspberry Pi OS ships it)</li>
+    <li>for weather: an RTL-SDR receiver, <code>rtl_433</code>, and a supported
+      433 MHz temperature sensor</li>
+    <li>for RF: Dire Wolf (for <code>gen_packets</code>) and rpitx, including its
+      bundled <code>csdr</code></li>
+    <li>for voice: <code>espeak-ng</code>, and root (rpitx opens <code>/dev/mem</code>)</li>
+  </ul>
+
+  <h2>Quick start</h2>
+  <pre>cp shellbeacon.conf.example shellbeacon.conf
+chmod 600 shellbeacon.conf
+# edit shellbeacon.conf: callsign, passcode, position, comment
+./shellbeacon.sh 1    # one cycle, then exit</pre>
+  <p>All station settings — including the APRS-IS passcode — live in the private
+  config file, never in the script.</p>
+
+  <h2>Provenance</h2>
+  <p>ShellBeacon is a fork of <strong>shellbeacon 1.0 by WA1GOV</strong>, a minimal
+  netcat APRS-IS beacon. The fork, by Robert McAtee (KJ5GBY), adds the telemetry,
+  weather, RF, and voice layers and the companion status page. Licensed under the
+  GNU General Public License v3.</p>
+
+  <footer>
+    <a href="https://github.com/robertmcatee/shellbeacon">Source on GitHub</a> ·
+    <a href="https://robertmcatee.net/projects">More projects</a> ·
+    <a href="https://robertmcatee.net/">robertmcatee.net</a>
+  </footer>
+</main>
+</body>
+</html>
