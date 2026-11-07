@@ -1,0 +1,36 @@
+# shellbeacon-page.conf - station configuration for shellbeacon-page.py
+# Copy to /usr/local/etc/shellbeacon-page.conf and edit. No secrets in
+# this file - it is safe to keep readable. (Your APRS passcode stays in
+# shellbeacon.conf, which this file does not touch.)
+
+# --- station identity ---
+callsign="N0CALL"             # your callsign, as transmitted
+place="Nowhere, Texas"        # shown under the callsign
+lat="29.0000"                 # station latitude, decimal degrees
+lon="-98.0000"                # station longitude, decimal degrees
+# grid="EL09sp"               # optional - computed from lat/lon if unset
+comment="My APRS station"     # your station comment, as transmitted
+about="on a Raspberry Pi."    # continues the sentence "ShellBeacon ..."
+# repo_url="https://github.com/robertmcatee/shellbeacon-telemetry"
+                              # if set, the word "ShellBeacon" in the
+                              # About section links here
+# footer_extra=""             # raw HTML appended to the page footer
+
+# --- paths ---
+webroot="/var/www/html/station"     # where index.html + JSON are written
+statedir="/var/lib/shellbeacon-page"  # the 24 h temperature history
+wxfile="/home/pi/wx/latest.json"    # the wx-collect.sh output file
+beacon_dir="/var/aprs-beacon"       # where rf.enabled / voice.enabled live
+beacon_unit="aprs-beacon"           # the beacon's systemd unit (journal)
+# map_features=""             # optional JSON: towns, highways, rivers
+                              # drawn on the locator chart - see
+                              # map-features.example.json
+
+# --- station facts shown on the page ---
+rf_freq="144.390"
+voice_freq="146.430"
+beacon_interval_min="20"
+
+# --- staleness thresholds (minutes) ---
+wx_stale_min="40"             # match the beacon's WX fold-in threshold
+beacon_stale_min="45"
