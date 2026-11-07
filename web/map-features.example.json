@@ -1,1 +1,591 @@
-{"_comment":"Worked example: the reference station KJ5GBY, San Antonio, Texas (Maidenhead EL09). Points are [latitude, longitude]. Towns take anchor/dx/dy for label placement; 'big' draws the primary city larger. Highways and rivers are schematic polylines through real places, clipped at the square's edges - a chart, not a road map.","highways":[{"label":"I-10","label_at":[29.52,-98.14],"points":[[29.6,-98.0],[29.45,-98.3],[29.4241,-98.4936],[29.7896,-98.7293],[29.9703,-98.904],[30.0,-98.99]]},{"label":"I-35","label_anchor":"end","label_at":[29.76,-98.075],"points":[[29.8,-98.0],[29.6993,-98.1215],[29.4241,-98.4936],[29.2,-98.6],[29.0,-98.8]]},{"label":"US-281","label_at":[29.9,-98.4],"points":[[30.0,-98.42],[29.7482,-98.4511],[29.55,-98.455],[29.4241,-98.4936],[29.0,-98.47]]}],"rivers":[{"label":"Guadalupe R.","label_at":[29.845,-98.5],"points":[[29.9703,-98.904],[29.9,-98.55],[29.8,-98.3],[29.6993,-98.1215],[29.55,-98.05],[29.5,-98.0]]}],"towns":[{"anchor":"end","big":true,"dx":-10,"dy":4,"lat":29.4241,"lon":-98.4936,"name":"SAN ANTONIO"},{"anchor":"start","dx":9,"dy":4,"lat":29.7896,"lon":-98.7293,"name":"Boerne"},{"anchor":"start","dx":9,"dy":4,"lat":29.9703,"lon":-98.904,"name":"Comfort"},{"anchor":"end","dx":-9,"dy":4,"lat":29.6993,"lon":-98.1215,"name":"New Braunfels"},{"anchor":"end","dx":-9,"dy":4,"lat":29.1333,"lon":-98.1562,"name":"Floresville"},{"anchor":"start","dx":9,"dy":-6,"lat":29.7482,"lon":-98.4511,"name":"Bulverde"}]}
+{
+ "_comment": "Worked example: the reference station KJ5GBY, San Antonio, Texas (Maidenhead EL09). Points are [latitude, longitude]. Towns take anchor/dx/dy for label placement; 'big' draws the primary city larger, 'small' a minor municipality. Highways are schematic polylines through real places, clipped at the square's edges - a chart, not a road map. The two loops are schematic ellipses fitted to their real interchange crossings (Loop 410 at US-281: 29.521 N; Loop 1604 at US-281: 29.609 N).",
+ "highways": [
+  {
+   "label": "I-10",
+   "label_anchor": "end",
+   "label_at": [
+    29.56,
+    -98.05
+   ],
+   "points": [
+    [
+     29.6,
+     -98.0
+    ],
+    [
+     29.45,
+     -98.3
+    ],
+    [
+     29.4241,
+     -98.4936
+    ],
+    [
+     29.7896,
+     -98.7293
+    ],
+    [
+     29.9703,
+     -98.904
+    ],
+    [
+     30.0,
+     -98.99
+    ]
+   ]
+  },
+  {
+   "label": "I-35",
+   "label_anchor": "end",
+   "label_at": [
+    29.76,
+    -98.075
+   ],
+   "points": [
+    [
+     29.8,
+     -98.0
+    ],
+    [
+     29.6993,
+     -98.1215
+    ],
+    [
+     29.4241,
+     -98.4936
+    ],
+    [
+     29.2,
+     -98.6
+    ],
+    [
+     29.0,
+     -98.8
+    ]
+   ]
+  },
+  {
+   "label": "US-281",
+   "label_anchor": "end",
+   "label_at": [
+    29.955,
+    -98.435
+   ],
+   "points": [
+    [
+     30.0,
+     -98.42
+    ],
+    [
+     29.7482,
+     -98.4511
+    ],
+    [
+     29.55,
+     -98.455
+    ],
+    [
+     29.4241,
+     -98.4936
+    ],
+    [
+     29.0,
+     -98.47
+    ]
+   ]
+  },
+  {
+   "label": "I-37",
+   "label_at": [
+    29.19,
+    -98.33
+   ],
+   "points": [
+    [
+     29.4241,
+     -98.4936
+    ],
+    [
+     29.33,
+     -98.45
+    ],
+    [
+     29.15,
+     -98.35
+    ],
+    [
+     29.0,
+     -98.28
+    ]
+   ]
+  },
+  {
+   "label": "US-90",
+   "label_at": [
+    29.375,
+    -98.95
+   ],
+   "points": [
+    [
+     29.4241,
+     -98.4936
+    ],
+    [
+     29.41,
+     -98.7
+    ],
+    [
+     29.3569,
+     -98.8715
+    ],
+    [
+     29.3476,
+     -99.1408
+    ],
+    [
+     29.34,
+     -100.0
+    ]
+   ]
+  },
+  {
+   "label": "LOOP 410",
+   "label_at": [
+    29.295,
+    -98.44
+   ],
+   "points": [
+    [
+     29.4241,
+     -98.3186
+    ],
+    [
+     29.4464,
+     -98.323
+    ],
+    [
+     29.4675,
+     -98.3359
+    ],
+    [
+     29.4864,
+     -98.3568
+    ],
+    [
+     29.5023,
+     -98.3845
+    ],
+    [
+     29.5142,
+     -98.4177
+    ],
+    [
+     29.5216,
+     -98.4547
+    ],
+    [
+     29.5241,
+     -98.4936
+    ],
+    [
+     29.5216,
+     -98.5325
+    ],
+    [
+     29.5142,
+     -98.5695
+    ],
+    [
+     29.5023,
+     -98.6027
+    ],
+    [
+     29.4864,
+     -98.6304
+    ],
+    [
+     29.4675,
+     -98.6513
+    ],
+    [
+     29.4464,
+     -98.6642
+    ],
+    [
+     29.4241,
+     -98.6686
+    ],
+    [
+     29.4018,
+     -98.6642
+    ],
+    [
+     29.3807,
+     -98.6513
+    ],
+    [
+     29.3618,
+     -98.6304
+    ],
+    [
+     29.3459,
+     -98.6027
+    ],
+    [
+     29.334,
+     -98.5695
+    ],
+    [
+     29.3266,
+     -98.5325
+    ],
+    [
+     29.3241,
+     -98.4936
+    ],
+    [
+     29.3266,
+     -98.4547
+    ],
+    [
+     29.334,
+     -98.4177
+    ],
+    [
+     29.3459,
+     -98.3845
+    ],
+    [
+     29.3618,
+     -98.3568
+    ],
+    [
+     29.3807,
+     -98.3359
+    ],
+    [
+     29.4018,
+     -98.323
+    ],
+    [
+     29.4241,
+     -98.3186
+    ]
+   ],
+   "style": "loop"
+  },
+  {
+   "label": "LOOP 1604",
+   "label_anchor": "end",
+   "label_at": [
+    29.47,
+    -98.87
+   ],
+   "points": [
+    [
+     29.46,
+     -98.145
+    ],
+    [
+     29.4967,
+     -98.1539
+    ],
+    [
+     29.5316,
+     -98.1802
+    ],
+    [
+     29.5629,
+     -98.2224
+    ],
+    [
+     29.589,
+     -98.2787
+    ],
+    [
+     29.6087,
+     -98.346
+    ],
+    [
+     29.6209,
+     -98.421
+    ],
+    [
+     29.625,
+     -98.5
+    ],
+    [
+     29.6209,
+     -98.579
+    ],
+    [
+     29.6087,
+     -98.654
+    ],
+    [
+     29.589,
+     -98.7213
+    ],
+    [
+     29.5629,
+     -98.7776
+    ],
+    [
+     29.5316,
+     -98.8198
+    ],
+    [
+     29.4967,
+     -98.8461
+    ],
+    [
+     29.46,
+     -98.855
+    ],
+    [
+     29.4233,
+     -98.8461
+    ],
+    [
+     29.3884,
+     -98.8198
+    ],
+    [
+     29.3571,
+     -98.7776
+    ],
+    [
+     29.331,
+     -98.7213
+    ],
+    [
+     29.3113,
+     -98.654
+    ],
+    [
+     29.2991,
+     -98.579
+    ],
+    [
+     29.295,
+     -98.5
+    ],
+    [
+     29.2991,
+     -98.421
+    ],
+    [
+     29.3113,
+     -98.346
+    ],
+    [
+     29.331,
+     -98.2787
+    ],
+    [
+     29.3571,
+     -98.2224
+    ],
+    [
+     29.3884,
+     -98.1802
+    ],
+    [
+     29.4233,
+     -98.1539
+    ],
+    [
+     29.46,
+     -98.145
+    ]
+   ],
+   "style": "loop"
+  }
+ ],
+ "rivers": [
+  {
+   "label": "Guadalupe R.",
+   "label_at": [
+    29.905,
+    -98.63
+   ],
+   "points": [
+    [
+     29.9703,
+     -98.904
+    ],
+    [
+     29.9,
+     -98.55
+    ],
+    [
+     29.8,
+     -98.3
+    ],
+    [
+     29.6993,
+     -98.1215
+    ],
+    [
+     29.55,
+     -98.05
+    ],
+    [
+     29.5,
+     -98.0
+    ]
+   ]
+  }
+ ],
+ "towns": [
+  {
+   "anchor": "end",
+   "big": true,
+   "dx": -10,
+   "dy": 4,
+   "lat": 29.4241,
+   "lon": -98.4936,
+   "name": "SAN ANTONIO"
+  },
+  {
+   "anchor": "start",
+   "dx": 9,
+   "dy": 4,
+   "lat": 29.7896,
+   "lon": -98.7293,
+   "name": "Boerne"
+  },
+  {
+   "anchor": "start",
+   "dx": 9,
+   "dy": 4,
+   "lat": 29.9703,
+   "lon": -98.904,
+   "name": "Comfort"
+  },
+  {
+   "anchor": "end",
+   "dx": -9,
+   "dy": 30,
+   "lat": 29.6993,
+   "lon": -98.1215,
+   "name": "New Braunfels"
+  },
+  {
+   "anchor": "end",
+   "dx": -9,
+   "dy": 4,
+   "lat": 29.1333,
+   "lon": -98.1562,
+   "name": "Floresville"
+  },
+  {
+   "anchor": "start",
+   "dx": 9,
+   "dy": -6,
+   "lat": 29.7482,
+   "lon": -98.4511,
+   "name": "Bulverde"
+  },
+  {
+   "anchor": "start",
+   "dx": 8,
+   "dy": 3,
+   "lat": 29.7311,
+   "lon": -98.6276,
+   "name": "Fair Oaks Ranch",
+   "small": true
+  },
+  {
+   "anchor": "start",
+   "dx": 8,
+   "dy": 3,
+   "lat": 29.5641,
+   "lon": -98.6874,
+   "name": "Helotes",
+   "small": true
+  },
+  {
+   "anchor": "start",
+   "dx": 8,
+   "dy": 3,
+   "lat": 29.4931,
+   "lon": -98.6162,
+   "name": "Leon Valley",
+   "small": true
+  },
+  {
+   "anchor": "start",
+   "dx": 8,
+   "dy": 3,
+   "lat": 29.8756,
+   "lon": -98.4082,
+   "name": "Spring Branch",
+   "small": true
+  },
+  {
+   "anchor": "end",
+   "dx": -8,
+   "dy": 3,
+   "lat": 29.568,
+   "lon": -98.2721,
+   "name": "Schertz",
+   "small": true
+  },
+  {
+   "anchor": "start",
+   "dx": 8,
+   "dy": 3,
+   "lat": 29.5153,
+   "lon": -98.3121,
+   "name": "Converse",
+   "small": true
+  },
+  {
+   "anchor": "start",
+   "dx": 8,
+   "dy": 3,
+   "lat": 29.7258,
+   "lon": -99.0692,
+   "name": "Bandera",
+   "small": true
+  },
+  {
+   "anchor": "start",
+   "dx": 8,
+   "dy": 4,
+   "lat": 29.3569,
+   "lon": -98.8715,
+   "name": "Castroville",
+   "small": true
+  },
+  {
+   "anchor": "start",
+   "dx": 8,
+   "dy": 4,
+   "lat": 29.3476,
+   "lon": -99.1408,
+   "name": "Hondo",
+   "small": true
+  },
+  {
+   "anchor": "end",
+   "dx": -8,
+   "dy": 3,
+   "lat": 29.1409,
+   "lon": -98.9052,
+   "name": "Devine",
+   "small": true
+  },
+  {
+   "anchor": "start",
+   "dx": 8,
+   "dy": 3,
+   "lat": 29.2568,
+   "lon": -98.3346,
+   "name": "Elmendorf",
+   "small": true
+  }
+ ]
+}
