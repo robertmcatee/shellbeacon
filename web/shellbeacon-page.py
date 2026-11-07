@@ -61,6 +61,8 @@ DEFAULTS = {
     "beacon_unit": "aprs-beacon",
     "map_features": "",             # optional JSON: towns/highways/rivers
     "map_base": "",                 # optional real basemap JPEG (make-basemap.py)
+    "map_square": "",               # optional square-view basemap JPEG
+    "map_range": "",                # optional range-view basemap JPEG
     "rf_freq": "144.390",
     "voice_freq": "146.430",
     "beacon_interval_min": "20",
@@ -214,6 +216,29 @@ def load_features():
         return {}
 
 
+def light_variant(path):
+    root, ext = os.path.splitext(path)
+    return root + "-light" + ext
+
+
+def basemap_pair(conf_key):
+    """(dark, light) source paths if both files exist, else None."""
+    dark = CONF.get(conf_key) or ""
+    if dark and os.path.exists(dark) and os.path.exists(light_variant(dark)):
+        return dark, light_variant(dark)
+    return None
+
+
+def chart_images(name, gx, gy, gw, gh):
+    """The theme-following basemap pair for one chart: CSS shows the
+    night chart in the dark theme and the light chart in the light."""
+    return ('<image href="%s.jpg" x="%d" y="%d" width="%d" height="%d" '
+            'preserveAspectRatio="none" class="imgdark"/>\n'
+            '<image href="%s-light.jpg" x="%d" y="%d" width="%d" height="%d" '
+            'preserveAspectRatio="none" class="imglight"/>'
+            % (name, gx, gy, gw, gh, name, gx, gy, gw, gh))
+
+
 def subsquare_svg():
     """Basemap mode: the chart zooms to the station's own subsquare -
     the real map (map-base.jpg, built by make-basemap.py for exactly
@@ -264,7 +289,7 @@ def subsquare_svg():
     ext = "%d%d" % (ex, ey)
     return """<svg class="map hasbase" viewBox="0 0 {W} {H}" role="img" aria-label="Map of Maidenhead subsquare {grid}, station in extended square {ext}">
 <rect x="{gx}" y="{gy}" width="{gw}" height="{gh}" class="frame"/>
-<image href="map-base.jpg" x="{gx}" y="{gy}" width="{gw}" height="{gh}" preserveAspectRatio="none"/>
+{images}
 {lines}
 <rect x="{cx:.1f}" y="{cy:.1f}" width="{cw2:.1f}" height="{ch2:.1f}" class="cell"/>
 <text x="{gx2}" y="{gy2}" class="lab big">{grid}</text>
@@ -277,7 +302,7 @@ def subsquare_svg():
 <text x="{rx}" y="{bot2}" class="lab end">{elon}</text>
 <text x="{ax}" y="{ay}" class="lab attr">© OpenStreetMap contributors</text>
 </svg>""".format(W=W, H=H, gx=gx, gy=gy, gw=gw, gh=gh,
-                 lines="\n".join(lines),
+                 lines="\n".join(lines), images=chart_images("map-base", gx, gy, gw, gh),
                  cx=cx, cy=cy, cw2=cw2, ch2=ch2, px=px, py=py,
                  gx2=gx + 10, gy2=gy + 24, tx=cx + cw2 + 6, ty=cy + ch2 - 3,
                  top=gy - 10, bot=gy + gh + 20, bot2=gy + gh + 38, rx=gx + gw,
@@ -287,6 +312,139 @@ def subsquare_svg():
                  wlon=dm(cell_w, "E", "W"), elon=dm(cell_e, "E", "W"))
 
 
+RANGE_LAT_SPAN = 0.64          # keep in step with make-basemap.py
+
+
+def _dm(value, pos, neg):
+    d = int(abs(value))
+    m = (abs(value) - d) * 60
+    return "%d°%.1f′%s" % (d, m, pos if value >= 0 else neg)
+
+
+def square_svg():
+    """Basemap mode, square view: the whole Maidenhead square as a
+    real map, subsquare hairlines over it (Mercator Y), the station's
+    subsquare highlighted, pin at the exact position."""
+    west = math.floor(LON / 2.0) * 2.0
+    south = math.floor(LAT)
+    W, H = 696, 424
+    gx, gy, gw, gh = 48, 36, 600, 340
+
+    def X(lon):
+        return gx + gw * (lon - west) / 2.0
+
+    def merc(lat):
+        phi = math.radians(lat)
+        return math.log(math.tan(phi) + 1 / math.cos(phi))
+
+    def Y(lat):
+        top, bot = merc(south + 1), merc(south)
+        return gy + gh * (top - merc(lat)) / (top - bot)
+
+    lines = []
+    for i in range(25):
+        x = gx + gw * i / 24
+        lines.append('<line x1="%.1f" y1="%d" x2="%.1f" y2="%d" class="sub"/>' % (x, gy, x, gy + gh))
+        y = Y(south + i / 24.0)
+        lines.append('<line x1="%d" y1="%.1f" x2="%d" y2="%.1f" class="sub"/>' % (gx, y, gx + gw, y))
+    sub_x = int((LON - west) / 2.0 * 24)
+    sub_y = int((LAT - south) * 24)
+    cx = gx + gw * sub_x / 24
+    cy = Y(south + (sub_y + 1) / 24.0)
+    cw, ch = gw / 24, Y(south + sub_y / 24.0) - cy
+    px, py = X(LON), Y(LAT)
+    return """<svg class="map hasbase" viewBox="0 0 {W} {H}" role="img" aria-label="Map of Maidenhead square {grid4}, station in subsquare {sub}">
+<rect x="{gx}" y="{gy}" width="{gw}" height="{gh}" class="frame"/>
+{images}
+{lines}
+<rect x="{cx:.1f}" y="{cy:.1f}" width="{cw:.1f}" height="{ch:.1f}" class="cell"/>
+<text x="{gx2}" y="{gy2}" class="lab big">{grid4}</text>
+<text x="{tx:.1f}" y="{ty:.1f}" class="lab celllab">{sub}</text>
+<circle cx="{px:.1f}" cy="{py:.1f}" r="10" class="pinring"/>
+<circle cx="{px:.1f}" cy="{py:.1f}" r="4" class="pin"/>
+<text x="{gx}" y="{top}" class="lab">{nlat}&deg;N</text>
+<text x="{gx}" y="{bot}" class="lab">{slat}&deg;N</text>
+<text x="{gx}" y="{bot2}" class="lab">{wlon}&deg;W</text>
+<text x="{rx}" y="{bot2}" class="lab end">{elon}&deg;W</text>
+<text x="{ax}" y="{ay}" class="lab attr">© OpenStreetMap contributors</text>
+</svg>""".format(W=W, H=H, gx=gx, gy=gy, gw=gw, gh=gh,
+                 images=chart_images("map-square", gx, gy, gw, gh),
+                 lines="\n".join(lines),
+                 cx=cx, cy=cy, cw=cw, ch=ch, px=px, py=py,
+                 gx2=gx + 10, gy2=gy + 24, tx=cx + cw + 6, ty=cy + ch - 3,
+                 top=gy - 10, bot=gy + gh + 20, bot2=gy + gh + 38, rx=gx + gw,
+                 ax=gx + 6, ay=gy + gh - 8,
+                 grid4=GRID[:4], sub=GRID[4:],
+                 nlat=int(south + 1), slat=int(south),
+                 wlon=int(-west), elon=int(-(west + 2)))
+
+
+def range_svg():
+    """Basemap mode, range view: a station-centred chart with true
+    5/10/20-mile range rings - the operator's view of who can hear
+    the station. Bounds match make-basemap.py's range view."""
+    south = LAT - RANGE_LAT_SPAN / 2.0
+    north = LAT + RANGE_LAT_SPAN / 2.0
+
+    def merc(lat):
+        phi = math.radians(lat)
+        return math.log(math.tan(phi) + 1 / math.cos(phi))
+
+    dlon = (merc(north) - merc(south)) * (600.0 / 340.0) / (2 * math.pi) * 360.0
+    west, east = LON - dlon / 2.0, LON + dlon / 2.0
+    W, H = 696, 424
+    gx, gy, gw, gh = 48, 36, 600, 340
+
+    def X(lon):
+        return gx + gw * (lon - west) / (east - west)
+
+    def Y(lat):
+        top, bot = merc(north), merc(south)
+        return gy + gh * (top - merc(lat)) / (top - bot)
+
+    def ring(miles):
+        pts = []
+        delta = miles / 3958.8
+        phi, lam = math.radians(LAT), math.radians(LON)
+        for step in range(73):
+            theta = math.radians(step * 5)
+            p2 = math.asin(math.sin(phi) * math.cos(delta) +
+                           math.cos(phi) * math.sin(delta) * math.cos(theta))
+            l2 = lam + math.atan2(math.sin(theta) * math.sin(delta) * math.cos(phi),
+                                  math.cos(delta) - math.sin(phi) * math.sin(p2))
+            pts.append("%.1f,%.1f" % (X(math.degrees(l2)), Y(math.degrees(p2))))
+        return " ".join(pts)
+
+    rings, labels = [], []
+    for miles in (5, 10, 20):
+        rings.append('<polyline points="%s" class="ring"/>' % ring(miles))
+        top_lat = LAT + math.degrees(miles / 3958.8)
+        labels.append('<text x="%.1f" y="%.1f" class="lab ringlab">%d MI</text>'
+                      % (X(LON) + 7, Y(top_lat) + 4, miles))
+    px, py = X(LON), Y(LAT)
+    return """<svg class="map hasbase" viewBox="0 0 {W} {H}" role="img" aria-label="Range chart centred on the station, rings at 5, 10 and 20 miles">
+<rect x="{gx}" y="{gy}" width="{gw}" height="{gh}" class="frame"/>
+{images}
+{rings}
+{labels}
+<text x="{gx2}" y="{gy2}" class="lab big">RANGE</text>
+<circle cx="{px:.1f}" cy="{py:.1f}" r="10" class="pinring"/>
+<circle cx="{px:.1f}" cy="{py:.1f}" r="4" class="pin"/>
+<text x="{gx}" y="{top}" class="lab">{nlat}</text>
+<text x="{gx}" y="{bot}" class="lab">{slat}</text>
+<text x="{gx}" y="{bot2}" class="lab">{wlon}</text>
+<text x="{rx}" y="{bot2}" class="lab end">{elon}</text>
+<text x="{ax}" y="{ay}" class="lab attr">© OpenStreetMap contributors</text>
+</svg>""".format(W=W, H=H, gx=gx, gy=gy, gw=gw, gh=gh,
+                 images=chart_images("map-range", gx, gy, gw, gh),
+                 rings="\n".join(rings), labels="\n".join(labels),
+                 px=px, py=py, gx2=gx + 10, gy2=gy + 24,
+                 top=gy - 10, bot=gy + gh + 20, bot2=gy + gh + 38, rx=gx + gw,
+                 ax=gx + 6, ay=gy + gh - 8,
+                 nlat=_dm(north, "N", "S"), slat=_dm(south, "N", "S"),
+                 wlon=_dm(west, "E", "W"), elon=_dm(east, "E", "W"))
+
+
 def locator_svg():
     """The station's Maidenhead square as a chart: optional geography
     (towns, highways, rivers from the map-features file) under the
@@ -294,8 +452,7 @@ def locator_svg():
     station pinned at its exact position. With a basemap configured,
     the chart zooms to the station's subsquare instead - see
     subsquare_svg()."""
-    base_img = CONF.get("map_base") or ""
-    if base_img and os.path.exists(base_img):
+    if basemap_pair("map_base"):
         return subsquare_svg()
     import math
     west = math.floor(LON / 2.0) * 2.0         # square: 2 deg x 1 deg
@@ -388,6 +545,7 @@ PAGE = """<!DOCTYPE html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.classList.add('js');</script>
 <title>{call} — {place} · {grid}</title>
 <style>
 :root, html[data-theme="dark"] {{
@@ -452,6 +610,19 @@ svg.map .townlab.small {{ font-size:10px; opacity:.72; }}
 svg.map .attr {{ font-size:8.5px; opacity:.6; }}
 svg.map.hasbase .lab.big {{ fill:#f2ecdc; }}
 svg.map.hasbase .attr {{ fill:#c9d2c6; }}
+html[data-theme="light"] svg.map.hasbase .lab.big {{ fill:#073642; }}
+html[data-theme="light"] svg.map.hasbase .attr {{ fill:#073642; }}
+html[data-theme="dark"] svg.map .imglight {{ display:none; }}
+html[data-theme="light"] svg.map .imgdark {{ display:none; }}
+svg.map .ring {{ fill:none; stroke:var(--accent); stroke-width:1.2; stroke-dasharray:6 4; opacity:.85; }}
+svg.map .ringlab {{ fill:var(--accent); font-size:11px; }}
+.chartbtns {{ display:none; gap:6px; margin:0 0 8px; }}
+.js .chartbtns {{ display:flex; }}
+.chartbtns button {{ background:none; border:1px solid var(--line); color:var(--ink);
+  font:inherit; font-size:11px; letter-spacing:.14em; padding:4px 10px; cursor:pointer; }}
+.chartbtns button.on {{ color:var(--head); border-color:var(--head); }}
+.js .chartview {{ display:none; }}
+.js .chartview.on {{ display:block; }}
 svg.map .hwylab {{ fill:var(--accent); font-size:11px; }}
 svg.map .riverlab {{ fill:var(--accent2); font-size:11px; font-style:italic; }}
 svg.spark {{ width:100%; height:auto; display:block; }}
@@ -500,7 +671,7 @@ html[data-theme="light"] footer {{ color:var(--base0); }}
 
 <section>
   <h2>LOCATION — MAIDENHEAD {grid}</h2>
-  {map}
+  {charts}
   <p class="dim">{lat_fmt}&deg; N, {lon_fmt}&deg; W — the position the beacon transmits.
   Live track: <a href="https://aprs.fi/info/a/{call}">aprs.fi</a></p>
 </section>
@@ -532,6 +703,27 @@ html[data-theme="light"] footer {{ color:var(--base0); }}
     try {{ localStorage.setItem('shellbeacon-theme', next); }} catch (e) {{}}
     label();
   }});
+  var cbtns = document.querySelectorAll('.chartbtns button');
+  function show(view) {{
+    document.querySelectorAll('.chartview').forEach(function (el) {{
+      el.classList.toggle('on', el.id === 'chart-' + view);
+    }});
+    cbtns.forEach(function (b) {{ b.classList.toggle('on', b.getAttribute('data-view') === view); }});
+  }}
+  if (cbtns.length) {{
+    var initial = cbtns[0].getAttribute('data-view');
+    try {{
+      var savedView = localStorage.getItem('shellbeacon-chart');
+      cbtns.forEach(function (b) {{ if (b.getAttribute('data-view') === savedView) initial = savedView; }});
+    }} catch (e) {{}}
+    show(initial);
+    cbtns.forEach(function (b) {{
+      b.addEventListener('click', function () {{
+        show(b.getAttribute('data-view'));
+        try {{ localStorage.setItem('shellbeacon-chart', b.getAttribute('data-view')); }} catch (e) {{}}
+      }});
+    }});
+  }}
   function set(name, value) {{
     var el = document.querySelector('[data-bind="' + name + '"]');
     if (el && value !== null && value !== undefined) el.textContent = value;
@@ -604,6 +796,23 @@ def main():
     else:
         shellbeacon_link = "ShellBeacon"
 
+    views = []
+    if basemap_pair("map_base"):
+        views.append(("subsquare", "SUBSQUARE", subsquare_svg()))
+    if basemap_pair("map_square"):
+        views.append(("square", "SQUARE", square_svg()))
+    if basemap_pair("map_range"):
+        views.append(("range", "RANGE", range_svg()))
+    if not views:
+        views.append(("square", "SQUARE", locator_svg()))
+    charts = ""
+    if len(views) > 1:
+        charts += ('<div class="chartbtns" role="group" aria-label="Chart view">'
+                   + "".join('<button type="button" data-view="%s">%s</button>'
+                             % (key, label) for key, label, _ in views) + "</div>")
+    charts += "".join('<div class="chartview" id="chart-%s">%s</div>'
+                      % (key, svg) for key, _, svg in views)
+
     page = PAGE.format(
         call=CALL,
         place=CONF["place"],
@@ -626,7 +835,7 @@ def main():
         webup=("UP" if tele["web_up"] else "DOWN") if tele else "—",
         rf=rf, voice=voice,
         rf_freq=CONF["rf_freq"], voice_freq=CONF["voice_freq"],
-        map=locator_svg(),
+        charts=charts,
         lat_fmt="%.4f" % abs(LAT), lon_fmt="%.4f" % abs(LON),
         shellbeacon_link=shellbeacon_link,
         about=CONF["about"],
@@ -662,8 +871,12 @@ def main():
     if wx_raw:
         with open(os.path.join(WEBROOT, "latest.json"), "wb") as fh:
             fh.write(wx_raw)
-    if CONF["map_base"] and os.path.exists(CONF["map_base"]):
-        shutil.copyfile(CONF["map_base"], os.path.join(WEBROOT, "map-base.jpg"))
+    for conf_key, name in (("map_base", "map-base"), ("map_square", "map-square"),
+                           ("map_range", "map-range")):
+        pair = basemap_pair(conf_key)
+        if pair:
+            shutil.copyfile(pair[0], os.path.join(WEBROOT, name + ".jpg"))
+            shutil.copyfile(pair[1], os.path.join(WEBROOT, name + "-light.jpg"))
     print("%s page generated: %s" % (CALL, status))
 
 
