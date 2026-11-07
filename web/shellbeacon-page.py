@@ -304,7 +304,7 @@ def locator_svg():
         ch = gh / 24
     attr = ('<text x="%d" y="%d" class="lab attr">© OpenStreetMap contributors</text>'
             % (gx + 6, gy + gh - 8)) if have_base else ""
-    return """<svg class="map" viewBox="0 0 {W} {H}" role="img" aria-label="Map of Maidenhead square {grid4}, station in subsquare {sub}">
+    return """<svg class="map{base_cls}" viewBox="0 0 {W} {H}" role="img" aria-label="Map of Maidenhead square {grid4}, station in subsquare {sub}">
 <rect x="{gx}" y="{gy}" width="{gw}" height="{gh}" class="frame"/>
 {geo}
 {lines}
@@ -324,6 +324,7 @@ def locator_svg():
                  gx2=gx + 10, gy2=gy + 24, tx=cx + cw + 6, ty=cy + ch - 3,
                  top=gy - 10, bot=gy + gh + 20, bot2=gy + gh + 38, rx=gx + gw,
                  grid4=GRID[:4], sub=GRID[4:], attr=attr,
+                 base_cls=" hasbase" if have_base else "",
                  nlat=int(south + 1), slat=int(south),
                  wlon=int(-west), elon=int(-(west + 2)))
 
@@ -395,6 +396,8 @@ svg.map .townlab {{ font-size:11.5px; }}
 svg.map .townlab.big2 {{ font-size:13px; fill:var(--head); letter-spacing:.14em; }}
 svg.map .townlab.small {{ font-size:10px; opacity:.72; }}
 svg.map .attr {{ font-size:8.5px; opacity:.6; }}
+svg.map.hasbase .lab.big {{ fill:#f2ecdc; }}
+svg.map.hasbase .attr {{ fill:#c9d2c6; }}
 svg.map .hwylab {{ fill:var(--accent); font-size:11px; }}
 svg.map .riverlab {{ fill:var(--accent2); font-size:11px; font-style:italic; }}
 svg.spark {{ width:100%; height:auto; display:block; }}
