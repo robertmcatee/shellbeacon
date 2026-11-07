@@ -17,18 +17,20 @@ assets, no JavaScript libraries, no trackers):
 - **Telemetry as transmitted**: the last T# frame is decoded out of
   the beacon's systemd journal — what aprs.fi received is what the
   page shows, not a re-measurement.
-- **A locator chart**: the station's Maidenhead **subsquare**,
-  street-level — the next Maidenhead level's 10 × 10 grid superimposed,
-  the station's extended-square cell highlighted, the station pinned
-  at its exact transmitted position. The base is a **real map**: run
-  `make-basemap.py` once and it fetches OpenStreetMap tiles for your
-  subsquare, stitches them, and re-renders them as a muted Solarized
-  night chart (one local JPEG, no tile calls or trackers when the page
-  is viewed; map data © OpenStreetMap contributors). Without a
-  basemap, the chart falls back to a drawn map of the whole square
-  with optional local geography (towns, highways, rivers) from a
-  map-features file — `map-features.example.json` is the reference
-  station's San Antonio set.
+- **Locator charts, three views** with a range switch: **Subsquare**
+  (street level, the next Maidenhead level's 10 × 10 grid over it, the
+  station's extended-square cell highlighted), **Square** (the whole
+  square for context, subsquare highlighted), and **Range** (a
+  station-centred chart with true 5/10/20-mile rings). The bases are
+  **real maps that follow the page theme**: run `make-basemap.py` once
+  per view and it fetches OpenStreetMap tiles, stitches them, and
+  re-renders each view twice — a Solarized night chart for the dark
+  theme and a light chart for the light theme (local JPEGs, no tile
+  calls or trackers when the page is viewed; map data © OpenStreetMap
+  contributors). Without basemaps, the chart falls back to a drawn map
+  of the square with optional local geography (towns, highways,
+  rivers) from a map-features file — `map-features.example.json` is
+  the reference station's San Antonio set.
 - **JSON feeds** next to the page: `latest.json` (the weather file,
   copied) and `telemetry.json` (status, weather, and the decoded
   frame) for anyone who would rather consume the station as data.
@@ -59,7 +61,7 @@ plain HTML and JSON.
 | File | Purpose |
 | --- | --- |
 | `shellbeacon-page.py` | the generator (pure Python 3 stdlib) |
-| `make-basemap.py` | one-time basemap builder (OpenStreetMap tiles → Solarized night chart; needs Pillow) |
+| `make-basemap.py` | one-time basemap builder: per view, OpenStreetMap tiles → Solarized dark + light charts (needs Pillow) |
 | `shellbeacon-page.conf.example` | station configuration template |
 | `map-features.example.json` | worked example: EL09 geography for the chart |
 | `shellbeacon-page.service` / `.timer` | regenerate every five minutes |
