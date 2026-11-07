@@ -17,15 +17,16 @@ assets, no JavaScript libraries, no trackers):
 - **Telemetry as transmitted**: the last T# frame is decoded out of
   the beacon's systemd journal — what aprs.fi received is what the
   page shows, not a re-measurement.
-- **A locator chart**: the station's Maidenhead square with the
-  subsquare grid superimposed — the station's subsquare highlighted,
-  the station pinned at its exact transmitted position. The base is a
-  **real map**: run `make-basemap.py` once and it fetches OpenStreetMap
-  tiles for your square, stitches them, and re-renders them as a muted
-  Solarized night chart (one local JPEG, no tile calls or trackers
-  when the page is viewed; map data © OpenStreetMap contributors).
-  Without a basemap, the chart falls back to a drawn grid with
-  optional local geography (towns, highways, rivers) from a
+- **A locator chart**: the station's Maidenhead **subsquare**,
+  street-level — the next Maidenhead level's 10 × 10 grid superimposed,
+  the station's extended-square cell highlighted, the station pinned
+  at its exact transmitted position. The base is a **real map**: run
+  `make-basemap.py` once and it fetches OpenStreetMap tiles for your
+  subsquare, stitches them, and re-renders them as a muted Solarized
+  night chart (one local JPEG, no tile calls or trackers when the page
+  is viewed; map data © OpenStreetMap contributors). Without a
+  basemap, the chart falls back to a drawn map of the whole square
+  with optional local geography (towns, highways, rivers) from a
   map-features file — `map-features.example.json` is the reference
   station's San Antonio set.
 - **JSON feeds** next to the page: `latest.json` (the weather file,
