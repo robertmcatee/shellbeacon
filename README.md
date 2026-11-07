@@ -36,6 +36,7 @@ weather and telemetry are public on aprs.fi.
 | `shellbeacon.sh` | the beacon (APRS-IS + telemetry + WX + optional RF + voice) |
 | `shellbeacon.conf.example` | station configuration template — copy to `shellbeacon.conf`, edit, keep private |
 | `wx-collect.sh` | companion collector: keeps the latest outdoor-sensor reading in `~/wx/latest.json` |
+| `web/` | companion status page: weather, transmitted telemetry, and a locator chart as one static page — see `web/README.md` |
 
 ## Requirements
 
@@ -63,6 +64,16 @@ chmod 600 shellbeacon.conf
 Run it under systemd, cron, or whatever you like. The telemetry
 sequence number persists in `tele.seq` next to the script, so
 restarts don't reset it (aprs.fi keys telemetry by sequence).
+
+## Status page
+
+`web/` holds a companion generator that renders the station's status
+as a single static web page — current weather with a 24-hour trace,
+the last telemetry frame as transmitted (decoded from the beacon's
+journal), station status in the beacon's own vocabulary, and a drawn
+Maidenhead locator chart with the station pinned — Solarized, dark by
+default, no external assets. The reference station's page is live at
+<https://www.cenzontle.us/kj5gby/>. See `web/README.md`.
 
 ## Weather
 
