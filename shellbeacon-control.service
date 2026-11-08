@@ -1,0 +1,11 @@
+[Unit]
+Description=ShellBeacon station control panel (localhost:8891, behind nginx auth)
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/python3 /usr/local/sbin/shellbeacon-control.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

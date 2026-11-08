@@ -174,11 +174,23 @@ txrf() {
 ###### Runs in this (root) context because rpitx needs /dev/mem.
 txvoice() {
   [ -e "$voice_flag" ] || return 0
+  # Control-panel hold: stay off the air while a net is on. The hold
+  # file holds an epoch deadline and expires on its own; a stale or
+  # malformed file is removed, never obeyed forever.
+  if [ -f "$scriptdir/voice.hold" ]; then
+    hold_until=$(cat "$scriptdir/voice.hold" 2>/dev/null || echo 0)
+    case "$hold_until" in ''|*[!0-9]*) hold_until=0 ;; esac
+    if [ "$(date +%s)" -lt "$hold_until" ]; then
+      echo "Voice held until $(date -d "@$hold_until" '+%H:%M') (control panel)"
+      return 0
+    fi
+    rm -f "$scriptdir/voice.hold"
+  fi
   [ -x "$rpitx" ] || return 0
   vwav=$(mktemp /tmp/voice.XXXXXX.wav) || return 0
   # Tidewater fragments first (already 48 kHz, no resampling needed);
   # espeak stays as the fallback for place names and build failures.
-  vsay_args=(--dir "$scriptdir" --prefix voice-tidewater --out "$vwav" --hour "$(date '+%-I')" --minute "$(date '+%-M')" --ampm "$(date '+%p')")
+  vsay_args=(--dir "$scriptdir" --prefix voice-tidewater2 --out "$vwav" --hour "$(date '+%-I')" --minute "$(date '+%-M')" --ampm "$(date '+%p')")
   [ -n "$WXTEMPF" ] && vsay_args+=(--temp "$WXTEMPF" --wx-ok)
   if [ -z "$sitecheck_host" ] || [ "$SITEV" = "1" ]; then vsay_args+=(--web-ok); fi
   # The one known place has a fragment; any other place falls back to
