@@ -57,31 +57,46 @@ def fmt_time(epoch):
 
 
 PAGE = """<!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8">
+<html lang="en" data-theme="dark"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>KJ5GBY Station Control</title>
 <style>
-body{background:#002b36;color:#839496;font-family:ui-monospace,Menlo,monospace;
+:root, html[data-theme="dark"]{
+--bg:#002b36;--panel:#073642;--ink:#839496;--head:#eee8d5;--dim:#586e75;
+--line:#586e75;--btn:#0a4a5c;--btnink:#eee8d5;--accent:#2aa198;--accent2:#268bd2;
+--warn:#dc322f;--cardh:#b58900}
+html[data-theme="light"]{
+--bg:#fdf6e3;--panel:#eee8d5;--ink:#657b83;--head:#073642;--dim:#839496;
+--line:#93a1a1;--btn:#eee8d5;--btnink:#073642;--accent:#2aa198;--accent2:#268bd2;
+--warn:#dc322f;--cardh:#b58900}
+body{background:var(--bg);color:var(--ink);font-family:ui-monospace,Menlo,monospace;
 margin:0;padding:18px;font-size:16px}
-h1{color:#eee8d5;font-size:20px;margin:0 0 4px}
-.sub{color:#586e75;margin-bottom:16px}
-.card{background:#073642;border:1px solid #586e75;border-radius:8px;
+header.top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+h1{color:var(--head);font-size:20px;margin:0 0 4px}
+.sub{color:var(--dim);margin-bottom:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;
 padding:14px;margin-bottom:14px}
-.card h2{color:#b58900;font-size:13px;letter-spacing:.12em;margin:0 0 10px}
-.state{color:#eee8d5}
+.card h2{color:var(--cardh);font-size:13px;letter-spacing:.12em;margin:0 0 10px}
+.state{color:var(--head)}
 form{margin:0}
 .row{display:flex;flex-wrap:wrap;gap:8px}
-button{background:#0a4a5c;color:#eee8d5;border:1px solid #2aa198;
+button{background:var(--btn);color:var(--btnink);border:1px solid var(--accent);
 border-radius:6px;padding:12px 16px;font:inherit;font-size:15px;cursor:pointer}
-button.warn{border-color:#dc322f}
-button:active{background:#2aa198;color:#002b36}
-input[type=time]{background:#002b36;color:#eee8d5;border:1px solid #586e75;
+button.warn{border-color:var(--warn)}
+button:active{background:var(--accent);color:var(--bg)}
+button#theme{background:none;border:1px solid var(--line);color:var(--ink);
+border-radius:0;padding:5px 10px;font-size:12px;letter-spacing:.1em;flex:none}
+input[type=time]{background:var(--bg);color:var(--head);border:1px solid var(--line);
 border-radius:6px;padding:10px;font:inherit}
-.msg{border-color:#2aa198;color:#eee8d5}
-a{color:#268bd2}
+.msg{border-color:var(--accent);color:var(--head)}
+a{color:var(--accent2)}
 </style></head><body>
+<header class="top"><div>
 <h1>KJ5GBY &mdash; Station Control</h1>
 <div class="sub">San Antonio, Texas &middot; 146.430 voice &middot; APRS 144.390</div>
+</div>
+<button id="theme" type="button" aria-label="Toggle light and dark">LIGHT</button>
+</header>
 {msg}
 <div class="card"><h2>STATE</h2><div class="state">{state}</div></div>
 <div class="card"><h2>VOICE HOLD &mdash; FOR A NET</h2>
@@ -107,6 +122,23 @@ a{color:#268bd2}
 </div></div>
 <div class="sub">Every action is logged. Holds expire on their own.
 <a href="/kj5gby/">Station page</a></div>
+<script>
+(function () {
+  var root = document.documentElement, btn = document.getElementById('theme');
+  try {
+    var saved = localStorage.getItem('shellbeacon-theme');
+    if (saved === 'light' || saved === 'dark') root.setAttribute('data-theme', saved);
+  } catch (e) {}
+  function label() { btn.textContent = root.getAttribute('data-theme') === 'dark' ? 'LIGHT' : 'DARK'; }
+  label();
+  btn.addEventListener('click', function () {
+    var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('shellbeacon-theme', next); } catch (e) {}
+    label();
+  });
+})();
+</script>
 </body></html>"""
 
 
