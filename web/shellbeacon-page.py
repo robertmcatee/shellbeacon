@@ -888,7 +888,17 @@ def main():
     status = "ALL STATION SYSTEMS NORMAL" if not down else " — ".join(down)
 
     rf = "ON" if os.path.exists(os.path.join(BEACON_DIR, "rf.enabled")) else "OFF"
-    voice = "ON" if os.path.exists(os.path.join(BEACON_DIR, "voice.enabled")) else "OFF"
+    voice_on = os.path.exists(os.path.join(BEACON_DIR, "voice.enabled"))
+    voice = "ON" if voice_on else "OFF"
+    voice_held_until = None
+    if voice_on:
+        try:
+            hold_until = int(open(os.path.join(BEACON_DIR, "voice.hold")).read().strip())
+            if hold_until > now.timestamp():
+                voice_held_until = datetime.fromtimestamp(hold_until).strftime("%H:%M")
+                voice = "HELD UNTIL %s" % voice_held_until
+        except (OSError, ValueError):
+            pass
 
     def fmt(value, spec="%.1f"):
         return (spec % value) if value is not None else "—"
@@ -953,7 +963,8 @@ def main():
         "generated_iso": now.isoformat(),
         "station": {"call": CALL, "grid": GRID, "lat": LAT, "lon": LON,
                     "place": CONF["place"], "comment": CONF["comment"],
-                    "rf": rf == "ON", "voice": voice == "ON"},
+                    "rf": rf == "ON", "voice": voice_on,
+                    "voice_held_until": voice_held_until},
         "status": status,
         "wx": ({"temperature_c": temp_c, "temperature_f": round(temp_f, 1),
                 "time": wx["time"], "age_min": int(wx_age.total_seconds() // 60),
