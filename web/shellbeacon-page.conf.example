@@ -29,11 +29,18 @@ beacon_unit="aprs-beacon"           # the beacon's systemd unit (journal)
                               # charts, built once by make-basemap.py:
                               # map_base = subsquare view, map_square =
                               # square view, map_range = range view,
-                              # map_hamlet = hamlet view. Each names
+                              # map_hamlet = hamlet view, map_club =
+                              # club view. Each names
                               # the DARK file; its "-light" twin must
                               # sit beside it. With a basemap the drawn
                               # geography is replaced.
 # map_hamlet=""               # the hamlet view's basemap (above)
+# map_club=""                 # the club view's basemap (above)
+# club_file=""                # optional JSON: the club view's marked
+                              # places (the ring itself is computed -
+                              # the CLUB_* constants in
+                              # shellbeacon-page.py / make-basemap.py
+                              # set its radius and frame)
 # hamlet_file=""              # optional JSON: the hamlet boundary
                               # polygon (drawn dashed, following the
                               # roads that bound the station's home

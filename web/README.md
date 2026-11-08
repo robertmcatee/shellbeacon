@@ -17,13 +17,15 @@ assets, no JavaScript libraries, no trackers):
 - **Telemetry as transmitted**: the last T# frame is decoded out of
   the beacon's systemd journal — what aprs.fi received is what the
   page shows, not a re-measurement.
-- **Locator charts, four views** with a range switch: **Subsquare**
+- **Locator charts, five views** with a range switch: **Subsquare**
   (street level, the next Maidenhead level's 10 × 10 grid over it, the
   station's extended-square cell highlighted), **Hamlet** (the
   station's home ground — the neighbourhood inside the roads that
   bound daily life, the boundary drawn dashed over the streets it
   follows, and the practical places marked: school, library, shops,
-  park, fire station), **Square** (the whole
+  park, fire station), **Club** (the station's 5-mile service
+  ring - the footprint of a hyper-local club - the ring drawn dashed
+  with its communities and meeting places marked), **Square** (the whole
   square for context, subsquare highlighted), and **Range** (a
   station-centred chart with true 5/10/20-mile rings). The bases are
   **real maps that follow the page theme**: run `make-basemap.py` once

@@ -42,6 +42,10 @@ HAMLET_SOUTH, HAMLET_NORTH = 29.596, 29.718
 HAMLET_CENTRE_LON = -98.4848
 HAMLET_ASPECT = 600.0 / 460.0  # the generator's hamlet frame
 
+# The club view: station-centred, the 5-mile service ring's frame.
+CLUB_LAT_SPAN = 0.16           # keep in step with shellbeacon-page.py
+CLUB_ASPECT = 600.0 / 480.0    # the generator's club frame
+
 
 def tile_frac(lat, lon, z):
     n = 2 ** z
@@ -74,12 +78,18 @@ def bounds(view, lat, lon):
         # longitude span from the Mercator aspect of the 600x340 frame
         dlon = (merc(north) - merc(south)) * (600.0 / 340.0) / (2 * math.pi) * 360.0
         return lon - dlon / 2.0, south, lon + dlon / 2.0, north, 10
+    if view == "club":
+        south = lat - CLUB_LAT_SPAN / 2.0
+        north = lat + CLUB_LAT_SPAN / 2.0
+        dlon = (merc(north) - merc(south)) * CLUB_ASPECT \
+            / (2 * math.pi) * 360.0
+        return lon - dlon / 2.0, south, lon + dlon / 2.0, north, 14
     if view == "hamlet":
         dlon = (merc(HAMLET_NORTH) - merc(HAMLET_SOUTH)) * HAMLET_ASPECT \
             / (2 * math.pi) * 360.0
         return (HAMLET_CENTRE_LON - dlon / 2.0, HAMLET_SOUTH,
                 HAMLET_CENTRE_LON + dlon / 2.0, HAMLET_NORTH, 14)
-    raise SystemExit("view must be subsquare, square, range or hamlet")
+    raise SystemExit("view must be subsquare, square, range, hamlet or club")
 
 
 def fetch_crop(west, south, east, north, zoom):

@@ -65,6 +65,8 @@ DEFAULTS = {
     "map_range": "",                # optional range-view basemap JPEG
     "map_hamlet": "",               # optional hamlet-view basemap JPEG
     "hamlet_file": "",              # optional JSON: hamlet boundary + POIs
+    "map_club": "",                 # optional club-view basemap JPEG
+    "club_file": "",                # optional JSON: club-view POIs
     "rf_freq": "144.390",
     "voice_freq": "146.430",
     "beacon_interval_min": "20",
@@ -220,6 +222,17 @@ def load_features():
 
 def load_hamlet():
     path = CONF["hamlet_file"]
+    if not path:
+        return {}
+    try:
+        with open(path) as fh:
+            return json.load(fh)
+    except Exception:
+        return {}
+
+
+def load_club():
+    path = CONF["club_file"]
     if not path:
         return {}
     try:
@@ -541,6 +554,93 @@ def hamlet_svg():
                  wlon=_dm(west, "E", "W"), elon=_dm(east, "E", "W"))
 
 
+# The club zone: the station's 5-mile service ring - the footprint
+# of the hyper-local club (weekly simplex net first, a repeater
+# after). Station-centred like the range view; the boundary is the
+# ring itself, computed, not stored. Keep in step with
+# make-basemap.py.
+CLUB_LAT_SPAN = 0.16           # keep in step with make-basemap.py
+CLUB_ASPECT = 600.0 / 480.0    # this view's frame, below
+CLUB_RADIUS_MI = 5.0
+
+
+def club_svg():
+    """Basemap mode, club view: the 5-mile service ring around the
+    station as a real map - the communities of the club's ground
+    marked (Stone Oak, Encino Park, Timberwood Park), the meeting
+    place and the school. Bounds match make-basemap.py's club view."""
+    def merc(lat):
+        phi = math.radians(lat)
+        return math.log(math.tan(phi) + 1 / math.cos(phi))
+
+    south, north = LAT - CLUB_LAT_SPAN / 2.0, LAT + CLUB_LAT_SPAN / 2.0
+    dlon = (merc(north) - merc(south)) * CLUB_ASPECT / (2 * math.pi) * 360.0
+    west, east = LON - dlon / 2.0, LON + dlon / 2.0
+    W, H = 696, 576
+    gx, gy, gw, gh = 48, 36, 600, 480
+
+    def X(lon):
+        return gx + gw * (lon - west) / (east - west)
+
+    def Y(lat):
+        top, bot = merc(north), merc(south)
+        return gy + gh * (top - merc(lat)) / (top - bot)
+
+    ring = []
+    coslat = math.cos(math.radians(LAT))
+    for deg in range(0, 361, 5):
+        a = math.radians(deg)
+        rlat = LAT + math.cos(a) * CLUB_RADIUS_MI / 69.05
+        rlon = LON + math.sin(a) * CLUB_RADIUS_MI / (69.05 * coslat)
+        ring.append("%.1f,%.1f" % (X(rlon), Y(rlat)))
+    poly = '<polygon points="%s" class="clubring"/>' % " ".join(ring)
+    data = load_club()
+    marks = []
+    for poi in data.get("pois") or []:
+        try:
+            px2, py2 = X(float(poi["lon"])), Y(float(poi["lat"]))
+            name = str(poi["name"])
+        except Exception:
+            continue
+        if not (gx <= px2 <= gx + gw and gy <= py2 <= gy + gh):
+            continue
+        if poi.get("side") == "below":
+            marks.append('<circle cx="%.1f" cy="%.1f" r="3.2" class="poi"/>'
+                         '<text x="%.1f" y="%.1f" class="lab poilab mid">%s</text>'
+                         % (px2, py2, px2, py2 + 15, name))
+        elif px2 > gx + gw - 170 or poi.get("side") == "left":
+            marks.append('<text x="%.1f" y="%.1f" class="lab poilab end">%s</text>'
+                         '<circle cx="%.1f" cy="%.1f" r="3.2" class="poi"/>'
+                         % (px2 - 8, py2 + 3.5, name, px2, py2))
+        else:
+            marks.append('<circle cx="%.1f" cy="%.1f" r="3.2" class="poi"/>'
+                         '<text x="%.1f" y="%.1f" class="lab poilab">%s</text>'
+                         % (px2, py2, px2 + 8, py2 + 3.5, name))
+    px, py = X(LON), Y(LAT)
+    return """<svg class="map hasbase" viewBox="0 0 {W} {H}" role="img" aria-label="Map of the station's five-mile club service ring, with its communities marked">
+<rect x="{gx}" y="{gy}" width="{gw}" height="{gh}" class="frame"/>
+{images}
+{poly}
+{marks}
+<text x="{gx2}" y="{gy2}" class="lab big">CLUB ZONE</text>
+<text x="{gx2}" y="{gy3}" class="lab">5-MILE SERVICE RING</text>
+<circle cx="{px:.1f}" cy="{py:.1f}" r="10" class="pinring"/>
+<circle cx="{px:.1f}" cy="{py:.1f}" r="4" class="pin"/>
+<text x="{gx}" y="{top}" class="lab">{nlat}</text>
+<text x="{gx}" y="{bot}" class="lab">{slat}</text>
+<text x="{gx}" y="{bot2}" class="lab">{wlon}</text>
+<text x="{rx}" y="{bot2}" class="lab end">{elon}</text>
+<text x="{ax}" y="{ay}" class="lab attr">© OpenStreetMap contributors</text>
+</svg>""".format(W=W, H=H, gx=gx, gy=gy, gw=gw, gh=gh,
+                 images=chart_images("map-club", gx, gy, gw, gh),
+                 poly=poly, marks="\n".join(marks),
+                 px=px, py=py, gx2=gx + 10, gy2=gy + 24, gy3=gy + 42,
+                 top=gy - 10, bot=gy + gh + 20, bot2=gy + gh + 38, rx=gx + gw,
+                 ax=gx + 6, ay=gy + gh - 8,
+                 nlat=_dm(north, "N", "S"), slat=_dm(south, "N", "S"),
+                 wlon=_dm(west, "E", "W"), elon=_dm(east, "E", "W"))
+
+
 def locator_svg():
     """The station's Maidenhead square as a chart: optional geography
     (towns, highways, rivers from the map-features file) under the
@@ -710,7 +810,7 @@ html[data-theme="light"] svg.map.hasbase .lab.big {{ fill:#073642; }}
 html[data-theme="light"] svg.map.hasbase .attr {{ fill:#073642; }}
 html[data-theme="dark"] svg.map .imglight {{ display:none; }}
 html[data-theme="light"] svg.map .imgdark {{ display:none; }}
-svg.map .hamlet {{ fill:var(--accent2); fill-opacity:.07; stroke:var(--accent2); stroke-width:1.6; stroke-dasharray:7 4; opacity:.9; }}
+svg.map .hamlet, svg.map .clubring {{ fill:var(--accent2); fill-opacity:.07; stroke:var(--accent2); stroke-width:1.6; stroke-dasharray:7 4; opacity:.9; }}
 svg.map .poi {{ fill:var(--head); stroke:var(--bg); stroke-width:1.2; }}
 svg.map .poilab {{ font-size:10.5px; letter-spacing:.05em; fill:var(--ink); paint-order:stroke; stroke-width:3px; }}
 svg.map .poilab.mid {{ text-anchor:middle; }}
@@ -913,6 +1013,8 @@ def main():
         views.append(("subsquare", "SUBSQUARE", subsquare_svg()))
     if basemap_pair("map_hamlet"):
         views.append(("hamlet", "HAMLET", hamlet_svg()))
+    if basemap_pair("map_club"):
+        views.append(("club", "CLUB", club_svg()))
     if basemap_pair("map_square"):
         views.append(("square", "SQUARE", square_svg()))
     if basemap_pair("map_range"):
@@ -986,7 +1088,7 @@ def main():
     if wx_raw:
         with open(os.path.join(WEBROOT, "latest.json"), "wb") as fh:
             fh.write(wx_raw)
-    for conf_key, name in (("map_base", "map-base"), ("map_hamlet", "map-hamlet"),
+    for conf_key, name in (("map_base", "map-base"), ("map_hamlet", "map-hamlet"), ("map_club", "map-club"),
                            ("map_square", "map-square"),
                            ("map_range", "map-range")):
         pair = basemap_pair(conf_key)

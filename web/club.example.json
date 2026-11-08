@@ -1,0 +1,31 @@
+{
+ "_comment": "Worked example: the reference station KJ5GBY, San Antonio, Texas. The club view's boundary is the station's 5-mile service ring, computed by the generator (CLUB_* constants in shellbeacon-page.py / make-basemap.py) - only the places are data: the communities of the ring and the places a young club uses. Points are [latitude, longitude] in the pois' lat/lon fields; side is left, below, or default right.",
+ "pois": [
+  {
+   "name": "Stone Oak",
+   "lat": 29.6457,
+   "lon": -98.4709
+  },
+  {
+   "name": "Encino Park",
+   "lat": 29.6351,
+   "lon": -98.4427,
+   "side": "below"
+  },
+  {
+   "name": "Timberwood Park",
+   "lat": 29.7072,
+   "lon": -98.5115
+  },
+  {
+   "name": "Parman Library",
+   "lat": 29.6365,
+   "lon": -98.5149
+  },
+  {
+   "name": "Tuscany Heights",
+   "lat": 29.6728,
+   "lon": -98.4559
+  }
+ ]
+}
